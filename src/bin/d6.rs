@@ -1,4 +1,6 @@
-fn part1() {
+use std::f32::consts::E;
+
+fn part1(input: &str) {
     let mut data: Vec<Vec<&str>> = vec![];
 
     for line in input.lines().map(str::trim) {
@@ -32,12 +34,36 @@ fn part1() {
     println!("{}", total);
 }
 
+fn part2(input: &str) {
+    let lines: Vec<&str> = input.lines().collect();
+    let max_widths: Vec<usize> = lines
+        .iter()
+        .map(|line| {
+            line.split_whitespace()
+                .map(|s| s.len())
+                .collect::<Vec<usize>>()
+        })
+        .reduce(|acc, e| {
+            println!("acc: {:?}, e: {:?}", acc, e);
+            acc.iter()
+                .zip(e.iter())
+                .inspect(|e| println!("{:?}", e))
+                .map(|(a, b)| std::cmp::max(*a, *b))
+                .collect()
+        })
+        .unwrap();
+    println!("{:?}", max_widths);
+}
 fn main() {
-    //let input = TEST;
-    let input = std::fs::read_to_string("input/d06.txt").unwrap();
+    let input = TEST;
+    // let input = std::fs::read_to_string("input/d06.txt").unwrap();
+    part2(&input);
 }
 
-const TEST: &str = r#"123 328  51 64 
-45 64  387 23 
+#[rustfmt::skip]
+const TEST: &str = r#"
+123 328  51 64 
+ 45 64  387 23 
   6 98  215 314
-*   +   *   +  "#;
+*   +   *   +  
+"#;
