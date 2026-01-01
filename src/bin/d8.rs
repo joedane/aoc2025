@@ -1,9 +1,13 @@
 use env_logger::Env;
 
 mod part1 {
-    use std::collections::{BTreeSet, HashMap};
+    use std::{
+        collections::{BTreeSet, HashMap},
+        fmt::Display,
+        sync::{LazyLock, Mutex},
+    };
 
-    use itertools::Itertools;
+    use itertools::{Itertools, merge, merge_join_by};
     use log::{debug, warn};
     use regex::Regex;
 
@@ -71,26 +75,55 @@ mod part1 {
         y: u32,
         z: u32,
         circuit: u16,
+        id: u16,
     }
+
+    static NEXT_C3_ID: LazyLock<Mutex<u16>> = LazyLock::new(|| Mutex::new(1));
 
     impl C3 {
         fn new(x: u32, y: u32, z: u32) -> Self {
+            let mut l = NEXT_C3_ID.lock().unwrap();
+            let this_id = *l;
+            *l = *l + 1;
             Self {
                 x,
                 y,
                 z,
                 circuit: 0,
+                id: this_id,
             }
         }
 
         fn dist(&self, other: &Self) -> Dist {
             Dist::dist(self, other)
         }
+
+        fn display_full(&self) -> impl Display {
+            C3FullDisplay(self)
+        }
+
+        fn display_id(&self) -> impl Display {
+            C3IDDisplay(self)
+        }
     }
 
-    impl std::fmt::Display for C3 {
+    struct C3FullDisplay<'a>(&'a C3);
+
+    impl<'a> std::fmt::Display for C3FullDisplay<'a> {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "[{}, {}, {}, {}]", self.x, self.y, self.z, self.circuit)
+            write!(
+                f,
+                "[id: {}, x: {}, y: {}, z: {}, cir: {}]",
+                self.0.id, self.0.x, self.0.y, self.0.z, self.0.circuit
+            )
+        }
+    }
+
+    struct C3IDDisplay<'a>(&'a C3);
+
+    impl<'a> std::fmt::Display for C3IDDisplay<'a> {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "[{}]", self.0.id)
         }
     }
 
@@ -130,13 +163,17 @@ mod part1 {
             let obja = &mut s1[ia as usize];
             let objb = &mut s2[(ib - ia - 1) as usize];
             debug!(
-                "Distance between [{:6}, {:6}, {:6}] and [{:6}, {:6}, {:6}] is {}",
-                obja.x, obja.y, obja.z, objb.x, objb.y, objb.z, sd.dist
+                "Distance between [{}] and [{}] is {}",
+                obja.display_full(),
+                objb.display_full(),
+                sd.dist
             );
             if obja.circuit == 0 && objb.circuit == 0 {
                 debug!(
                     "adding {} and {} to new circuit |{}|",
-                    obja, objb, next_circuit_id
+                    obja.display_id(),
+                    objb.display_id(),
+                    next_circuit_id
                 );
                 obja.circuit = next_circuit_id;
                 objb.circuit = next_circuit_id;
@@ -144,60 +181,44 @@ mod part1 {
                 connection_count += 1;
             } else if obja.circuit == 0 || objb.circuit == 0 {
                 if obja.circuit == 0 {
-                    debug!("adding {} to circuit |{}|", obja, objb.circuit);
+                    debug!("adding {} to circuit |{}|", obja.display_id(), objb.circuit);
                     obja.circuit = objb.circuit;
                 } else {
-                    debug!("adding {} to circuit |{}|", objb, obja.circuit);
+                    debug!("adding {} to circuit |{}|", objb.display_id(), obja.circuit);
                     objb.circuit = obja.circuit;
                 }
                 connection_count += 1;
             } else {
                 connection_count += 1;
                 debug!(
-                    "objs [{:6}, {:6}, {:6}] and [{:6}, {:6}, {:6}] have already been assigned (to circuit |{}| and circuit |{}|, respectively)",
-                    obja.x, obja.y, obja.z, objb.x, objb.y, objb.z, obja.circuit, objb.circuit
+                    "objs {} and {} have already been assigned (to circuit |{}| and circuit |{}|, respectively)",
+                    obja.display_id(),
+                    objb.display_id(),
+                    obja.circuit,
+                    objb.circuit
                 );
                 if obja.circuit != objb.circuit {
-                    for c in &mut circuits_to_merge {
-                        let merge_key = u16::min(obja.circuit, objb.circuit);
-
-                        if c.contains(&obja.circuit) || c.contains(&objb.circuit) {
-                            debug!(
-                                "merging |{}| and |{}| into merge set {:?}",
-                                obja.circuit, objb.circuit, c
-                            );
-                            c.insert(obja.circuit);
-                            c.insert(objb.circuit);
-                            continue 'pairs;
+                    let obja_circuit = obja.circuit;
+                    let objb_circuit = objb.circuit;
+                    let merge_key = u16::min(obja.circuit, objb.circuit);
+                    for o in &mut objs {
+                        if o.circuit == obja_circuit || o.circuit == objb_circuit {
+                            debug!("moving {} to circuit |{}|", o.display_id(), merge_key);
+                            o.circuit = merge_key;
                         }
                     }
                     debug!(
                         "adding new merge set for |{}| and |{}|",
-                        obja.circuit, objb.circuit
+                        obja_circuit, objb_circuit
                     );
-                    circuits_to_merge.push([obja.circuit, objb.circuit].into());
                 }
             }
         }
 
-        warn!("merging: {:?}", circuits_to_merge);
-        for cs in &mut circuits_to_merge {
-            assert!(cs.len() > 1);
-            let to_circuit = cs.pop_first().unwrap();
-            for obj in &mut objs {
-                if cs.contains(&obj.circuit) {
-                    obj.circuit = to_circuit;
-                }
-            }
-        }
         let mut counts: HashMap<u16, usize> = Default::default();
         for obj in objs {
             *counts.entry(obj.circuit).or_insert(0) += 1;
         }
-        /*         for c in &counts {
-                   println!("circuit {} has {} elements", c.0, c.1);
-               }
-        */
 
         for c in counts.iter().sorted_by(|a, b| b.1.cmp(a.1)) {
             println!("circuit {}: {:?}", c.0, c.1);
