@@ -368,7 +368,7 @@ impl<T> Iterator for GridIterator<'_, T> {
     }
 }
 impl<T> BasicGrid<T> {
-    pub fn row_major_iter(&self) -> GridIterator<T> {
+    pub fn row_major_iter(&self) -> GridIterator<'_, T> {
         GridIterator {
             grid: self,
             at_row: 0,

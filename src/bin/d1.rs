@@ -1,6 +1,4 @@
-use std::io::Read;
-
-
+#[allow(dead_code)]
 fn part1(input: &str) {
     let mut p: i32 = 50;
     let mut zeros: u32 = 0;
@@ -8,9 +6,7 @@ fn part1(input: &str) {
 
     for line in input.lines().map(str::trim) {
         let (dir, mut cnt) = match line.as_bytes() {
-            &[d, ref rest @ ..] => {
-                (d, str::from_utf8(rest).unwrap().parse::<i32>().unwrap())
-            },
+            &[d, ref rest @ ..] => (d, str::from_utf8(rest).unwrap().parse::<i32>().unwrap()),
             _ => panic!(),
         };
         if dir == b'L' {
@@ -21,7 +17,7 @@ fn part1(input: &str) {
         if p == 0 {
             zeros += 1;
         }
-//        println!("after '{}' pointer is at {}", line, p);
+        //        println!("after '{}' pointer is at {}", line, p);
     }
     println!("zero {} times", zeros);
 }
@@ -32,13 +28,11 @@ fn part2(input: &str) {
     let mut p: i32 = 50;
     for line in input.lines().map(str::trim) {
         let (dir, mut cnt) = match line.as_bytes() {
-            &[d, ref rest @ ..] => {
-                (d, str::from_utf8(rest).unwrap().parse::<i32>().unwrap())
-            },
+            &[d, ref rest @ ..] => (d, str::from_utf8(rest).unwrap().parse::<i32>().unwrap()),
             _ => panic!(),
         };
-    
-        zeros += (cnt / DIAL_SIZE) as u32;  
+
+        zeros += (cnt / DIAL_SIZE) as u32;
         cnt = cnt % DIAL_SIZE;
         if dir == b'L' {
             if p > 0 && p <= cnt {
@@ -61,6 +55,7 @@ fn main() {
     part2(&std::fs::read_to_string("input/d01.txt").unwrap());
 }
 
+#[allow(dead_code)]
 const TEST: &str = r#"L68
 L30
 R48

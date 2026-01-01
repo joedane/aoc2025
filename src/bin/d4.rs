@@ -26,6 +26,7 @@ fn can_lift(grid: &BasicGrid<State>, c: Coord) -> bool {
             < 4
 }
 
+#[allow(dead_code)]
 fn part1(input: &[&str]) {
     let grid: BasicGrid<State> = BasicGrid::new(&input);
     println!(
@@ -64,6 +65,7 @@ fn main() {
     part2(&input);
 }
 
+#[allow(dead_code)]
 static TEST: &str = r#"..@@.@@@@.
 @@@.@.@.@@
 @@@@@.@.@@

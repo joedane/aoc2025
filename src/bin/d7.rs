@@ -1,4 +1,4 @@
-use std::collections::{BTreeSet, HashSet};
+use std::collections::BTreeSet;
 
 use utils::{AsciiByte, BasicGrid, Coord, Dir};
 
@@ -20,6 +20,7 @@ impl Ord for OrdCoord {
     }
 }
 
+#[allow(unused)]
 fn part1(grid: &mut BasicGrid<AsciiByte>) {
     let start = grid.find(b'S'.into()).unwrap();
     let mut positions: BTreeSet<OrdCoord> = BTreeSet::new();
@@ -89,6 +90,7 @@ fn main() {
     part2(&mut grid);
 }
 
+#[allow(dead_code)]
 const TEST: &str = r#".......S.......
 ...............
 .......^.......

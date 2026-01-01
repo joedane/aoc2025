@@ -1,3 +1,4 @@
+#[allow(unused)]
 fn part1(input: &str) {
     let mut data: Vec<Vec<&str>> = vec![];
 
@@ -118,6 +119,7 @@ fn main() {
 }
 
 #[rustfmt::skip]
+#[allow(unused)]
 const TEST: &str = r#"123 328  51 64 
  45 64  387 23 
   6 98  215 314

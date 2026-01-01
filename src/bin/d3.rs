@@ -10,6 +10,7 @@ impl AsciiDigit for u8 {
     }
 }
 
+#[allow(dead_code)]
 fn process_part1(input: &[u8]) -> u64 {
     let (mut i_1, mut i_2) = (0usize, 1usize);
     'top: while i_2 < input.len() {
@@ -28,6 +29,7 @@ fn process_part1(input: &[u8]) -> u64 {
     return (input[i_1].digit_value() * 10 + input[i_2].digit_value()) as u64;
 }
 
+#[allow(dead_code)]
 fn part1(input: &str) {
     println!(
         "{}",

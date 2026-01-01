@@ -1,6 +1,4 @@
-use std::cmp::Reverse;
 use std::collections::BTreeSet;
-use std::iter::Extend;
 
 #[derive(Clone, Copy, Debug)]
 struct Rng {
@@ -9,6 +7,7 @@ struct Rng {
 }
 
 impl Rng {
+    #[allow(dead_code)]
     fn new(low: u64, high: u64) -> Self {
         Self { low, high }
     }
@@ -63,6 +62,7 @@ impl Ranges {
     fn add(&mut self, rng: Rng) {
         self.ranges.push(rng);
     }
+    #[allow(dead_code)]
     fn merge_rng(&mut self, rng: Rng) {
         if self.ranges.len() == 0 {
             self.ranges.push(rng);
@@ -94,7 +94,7 @@ impl Ranges {
         let bt: BTreeSet<Rng> = BTreeSet::from_iter(self.ranges.into_iter());
         let mut rng_iter = bt.into_iter();
         let mut new_rngs: Vec<Rng> = vec![rng_iter.next().unwrap()];
-        while let Some(mut r) = rng_iter.next() {
+        while let Some(r) = rng_iter.next() {
             let this_rng = &mut new_rngs.last_mut().unwrap();
             if r.low > this_rng.high {
                 new_rngs.push(r);
@@ -106,6 +106,7 @@ impl Ranges {
     }
 }
 
+#[allow(dead_code)]
 fn part1(input: &str) {
     let mut ranges: Vec<Rng> = Default::default();
     let mut in_ranges = true;
@@ -187,6 +188,7 @@ mod test {
     }
 }
 
+#[allow(dead_code)]
 static TEST: &str = r#"3-5
 10-14
 16-20
