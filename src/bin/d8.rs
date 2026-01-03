@@ -2,7 +2,7 @@ use env_logger::Env;
 
 mod part1 {
     use std::{
-        collections::{BTreeSet, HashMap},
+        collections::{BTreeSet, HashMap, HashSet},
         fmt::Display,
         sync::{LazyLock, Mutex},
     };
@@ -37,100 +37,49 @@ mod part1 {
             write!(f, "{:.1}", self.0 as f32 / (Dist::FACTOR as f32).sqrt())
         }
     }
-    struct SortData {
-        dist: Dist,
-        obja: u16,
-        objb: u16,
-    }
 
-    impl SortData {
-        fn new(dist: Dist, obja: u16, objb: u16) -> Self {
-            Self { dist, obja, objb }
-        }
-    }
-
-    impl Ord for SortData {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            self.dist.cmp(&other.dist)
-        }
-    }
-
-    impl PartialOrd for SortData {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-
-    impl PartialEq for SortData {
-        fn eq(&self, other: &Self) -> bool {
-            self.dist == other.dist && self.obja == other.obja && self.objb == other.objb
-        }
-    }
-
-    impl Eq for SortData {}
-
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     struct C3 {
         x: u32,
         y: u32,
         z: u32,
-        circuit: u16,
-        id: u16,
     }
-
-    static NEXT_C3_ID: LazyLock<Mutex<u16>> = LazyLock::new(|| Mutex::new(1));
 
     impl C3 {
         fn new(x: u32, y: u32, z: u32) -> Self {
-            let mut l = NEXT_C3_ID.lock().unwrap();
-            let this_id = *l;
-            *l = *l + 1;
-            Self {
-                x,
-                y,
-                z,
-                circuit: 0,
-                id: this_id,
-            }
+            Self { x, y, z }
         }
 
         fn dist(&self, other: &Self) -> Dist {
             Dist::dist(self, other)
         }
-
-        fn display_full(&self) -> impl Display {
-            C3FullDisplay(self)
-        }
-
-        fn display_id(&self) -> impl Display {
-            C3IDDisplay(self)
-        }
     }
 
-    struct C3FullDisplay<'a>(&'a C3);
-
-    impl<'a> std::fmt::Display for C3FullDisplay<'a> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                "[id: {}, x: {}, y: {}, z: {}, cir: {}]",
-                self.0.id, self.0.x, self.0.y, self.0.z, self.0.circuit
-            )
-        }
+    static NEXT_CIRCUIT_ID: LazyLock<Mutex<u16>> = LazyLock::new(|| Mutex::new(0));
+    struct Circuit {
+        id: u16,
+        points: HashSet<C3>,
     }
 
-    struct C3IDDisplay<'a>(&'a C3);
+    impl Circuit {
+        fn new(point: C3) -> Self {
+            let mut lock = NEXT_CIRCUIT_ID.lock().unwrap();
+            let this_id = *lock;
+            *lock = *lock + 1;
+            Self {
+                id: this_id,
+                points: [point].into(),
+            }
+        }
 
-    impl<'a> std::fmt::Display for C3IDDisplay<'a> {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "[{}]", self.0.id)
+        fn extend(&mut self, other: &mut Self) {
+            self.points.extend(other.points.iter());
+            other.points.clear();
         }
     }
-
     pub(crate) fn run(input: &str, count: usize) {
         let re = Regex::new(r"(\d+),(\d+),(\d+)").unwrap();
         let mut objs: Vec<C3> = Vec::with_capacity(1000);
-        let mut dists: BTreeSet<SortData> = BTreeSet::new();
         for (_, [x, y, z]) in re.captures_iter(&input).map(|c| c.extract()) {
             objs.push(C3::new(
                 x.parse().unwrap(),
@@ -138,21 +87,27 @@ mod part1 {
                 z.parse().unwrap(),
             ));
         }
+        let mut pairs: Vec<(C3, C3)> = Vec::with_capacity(objs.len() * objs.len() / 2);
+        //        let mut circuits: Vec<Circuit> = objs.iter().map(|o| Circuit::new(*o)).collect();
         for i1 in 0..objs.len() {
-            for i2 in 0..objs.len() {
-                if i1 == i2 {
-                    continue;
-                }
-                dists.insert(SortData::new(
-                    objs[i1].dist(&objs[i2]),
-                    i1.try_into().unwrap(),
-                    i2.try_into().unwrap(),
-                ));
+            for i2 in i1 + 1..objs.len() {
+                pairs.push((objs[0], objs[1]));
             }
         }
-        let mut next_circuit_id: u16 = 1;
-        let mut connection_count = 0;
+        pairs.sort_by(|a, b| a.0.dist(&a.1).cmp(&b.0.dist(&b.1)));
+        let mut union_map: HashMap<C3, Circuit> =
+            objs.iter().map(|p| (*p, Circuit::new(*p))).collect();
 
+        for (i, p) in pairs.iter().enumerate() {
+            if std::ptr::eq(union_map.get(&p.0).unwrap(), union_map.get(&p.1).unwrap()) {
+                continue;
+            }
+            union_map
+                .get_mut(&p.0)
+                .unwrap()
+                .extend(union_map.get_mut(&p.1).unwrap());
+            }
+            union_map.insert(p.1, v)
         'pairs: for sd in dists.iter() {
             if connection_count == count {
                 break;
