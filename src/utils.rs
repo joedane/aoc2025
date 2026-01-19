@@ -165,6 +165,22 @@ where
 }
 
 impl<T> BasicGrid<T> {
+    pub fn new_from<F: Fn(usize, usize) -> T>(width: usize, height: usize, func: F) -> Self {
+        let mut data: Vec<T> = Vec::with_capacity(width * height);
+        for c in 0..width {
+            for r in 0..height {
+                data.push(func(c, r));
+            }
+        }
+        Self {
+            width,
+            height,
+            data: data.into_boxed_slice(),
+        }
+    }
+}
+
+impl<T> BasicGrid<T> {
     pub fn find_with<F>(&self, pred: F) -> Vec<Coord>
     where
         F: Fn(&T) -> bool,
