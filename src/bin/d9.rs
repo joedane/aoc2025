@@ -1,5 +1,11 @@
 use itertools::Itertools;
-use std::{collections::HashSet, fmt::Display, num::ParseIntError, ops::Deref, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    num::ParseIntError,
+    ops::Deref,
+    str::FromStr,
+};
 use utils::{BasicGrid, Coord, Dir};
 
 #[derive(Clone, Copy, Debug)]
@@ -49,7 +55,7 @@ fn part1(points: Vec<P>) {
     println!("{}", biggest_size);
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum State {
     Outside,
     Boundary,
@@ -93,7 +99,8 @@ fn draw_line(grid: &mut BasicGrid<State>, a: Coord, b: Coord) {
     }
 }
 
-fn fill_from(grid: &mut BasicGrid<State>, seen: &mut HashSet<Coord>, seed: Coord) {
+fn fill_from(grid: &mut BasicGrid<State>, seed: Coord) {
+    let mut seen: HashSet<Coord> = Default::default();
     seen.insert(seed);
     let mut stack: Vec<Coord> = vec![seed];
     while let Some(c) = stack.pop() {
@@ -108,49 +115,30 @@ fn fill_from(grid: &mut BasicGrid<State>, seen: &mut HashSet<Coord>, seed: Coord
             });
     }
 }
-fn fill(grid: &mut BasicGrid<State>) {
-    let mut seen: HashSet<Coord> = Default::default();
-    for row in 0..grid.height {
-        let c = Coord::new(row, 0);
-        if !seen.contains(&c) {
-            match grid[c] {
-                State::Boundary => {}
-                _ => {
-                    fill_from(grid, &mut seen, c);
-                }
-            }
-        }
-        let c = Coord::new(row, grid.width - 1);
-        if !seen.contains(&c) {
-            match grid[c] {
-                State::Boundary => {}
-                _ => {
-                    fill_from(grid, &mut seen, c);
-                }
-            }
-        }
-    }
 
-    for col in 0..grid.width {
-        let c = Coord::new(0, col);
-        if !seen.contains(&c) {
-            match grid[c] {
-                State::Boundary => {}
-                _ => {
-                    fill_from(grid, &mut seen, c);
-                }
+fn get_inside_point(grid: &BasicGrid<State>) -> Coord {
+    for row in 0..grid.height {
+        for col in 0..grid.width {
+            if matches!(grid.at(Coord::new(row, col)), State::Boundary) {
+                continue;
             }
-        }
-        let c = Coord::new(grid.height - 1, col);
-        if !seen.contains(&c) {
-            match grid[c] {
-                State::Boundary => {}
-                _ => {
-                    fill_from(grid, &mut seen, c);
+            let mut hits: usize = 0;
+            let mut prev = grid.at(Coord::new(row, col));
+            for i in (0..=row).rev() {
+                if grid.at(Coord::new(i, col)) != prev {
+                    hits += 1;
                 }
+                prev = grid.at(Coord::new(i, col));
+            }
+            if hits % 2 == 1 {
+                return Coord::new(row, col);
             }
         }
     }
+    panic!()
+}
+fn fill(grid: &mut BasicGrid<State>) {
+    fill_from(grid, get_inside_point(grid));
 }
 fn area(p1: P, p2: P) -> usize {
     p1.col.abs_diff(p2.col) * p1.row.abs_diff(p2.row)
@@ -169,20 +157,42 @@ fn valid(grid: &BasicGrid<State>, p1: P, p2: P) -> bool {
     return true;
 }
 
+fn compress_coordinates(points: &[P]) -> (Vec<usize>, Vec<usize>) {
+    let xs: Vec<usize> = points.iter().map(|p| p.0.col).unique().sorted().collect();
+    let ys: Vec<usize> = points.iter().map(|p| p.0.row).unique().sorted().collect();
+    (xs, ys)
+}
 fn part2(points: &[P]) {
-    let (mut max_x, mut max_y, mut min_x, mut min_y) = (0usize, 0usize, usize::MAX, usize::MAX);
-    for p in points {
-        max_x = usize::max(max_x, p.col as usize);
-        max_y = usize::max(max_y, p.row as usize);
-    }
-    let mut grid: BasicGrid<State> = BasicGrid::new_default(max_x + 1, max_y + 1);
-    let start = points[0];
-    for i in 0..points.len() - 1 {
-        draw_line(&mut grid, *points[i], *points[i + 1]);
-    }
-    draw_line(&mut grid, *points[points.len() - 1], *start);
-    fill(&mut grid);
+    let (xs, ys) = compress_coordinates(points);
+    let mut grid: BasicGrid<State> = BasicGrid::new_default(xs.len(), ys.len());
+    let xMap: HashMap<usize, usize> = xs.iter().enumerate().map(|(i, val)| (*val, i)).collect();
+    let yMap: HashMap<usize, usize> = ys.iter().enumerate().map(|(i, val)| (*val, i)).collect();
 
+    fn xf_point(
+        xMap: &HashMap<usize, usize>,
+        yMap: &HashMap<usize, usize>,
+        points: &[P],
+        i: usize,
+    ) -> Coord {
+        Coord::new(
+            *yMap.get(&points[i].row).unwrap(),
+            *xMap.get(&points[i].col).unwrap(),
+        )
+    }
+    for i in 0..points.len() - 1 {
+        let a = xf_point(&xMap, &yMap, points, i);
+        let b = xf_point(&xMap, &yMap, points, i + 1);
+        draw_line(&mut grid, a, b);
+    }
+    draw_line(
+        &mut grid,
+        xf_point(&xMap, &yMap, points, points.len() - 1),
+        xf_point(&xMap, &yMap, points, 0),
+    );
+    fill(&mut grid);
+    grid.display_all();
+
+    /*
     let mut biggest: usize = 0;
 
     for i1 in 0..points.len() - 1 {
@@ -194,7 +204,8 @@ fn part2(points: &[P]) {
         }
     }
     println!("{}", biggest);
-
+    */
+}
 
 fn main() {
     let input = TEST;
